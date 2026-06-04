@@ -40,13 +40,27 @@ function getServerAddress() {
 }
 
 /* ========= HEALTH ========= */
-app.get("/health", (req, res) => {
+app.get("/health", async (req, res) => {
+  const serverAddress = getServerAddress();
+  let serverBalance = null;
+
+  if (serverAddress && process.env.TRON_PRIVATE_KEY) {
+    try {
+      const balanceSun = await tronWeb.trx.getBalance(serverAddress);
+      serverBalance = parseFloat(tronWeb.fromSun(balanceSun));
+    } catch (err) {
+      console.error("health balance check:", formatError(err));
+    }
+  }
+
   res.json({
     status: "ok",
-    serverAddress: getServerAddress() || null,
+    serverAddress: serverAddress || null,
+    serverBalance,
     autoSendAmount: AUTO_SEND_AMOUNT,
     minimumBalance: MINIMUM_BALANCE,
     hasPrivateKey: Boolean(process.env.TRON_PRIVATE_KEY),
+    canFundUsers: serverBalance !== null && serverBalance >= AUTO_SEND_AMOUNT,
   });
 });
 
